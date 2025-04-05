@@ -1,0 +1,2 @@
+- EMAIL validation
+- Dynamic ID generation
