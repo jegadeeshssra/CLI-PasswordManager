@@ -94,7 +94,7 @@ def login():
         # Retrieved salt and password the DB 
         userid   = row[0] # int type
         username = row[1]
-        salt     = row[2] 
+        salt     = row[2]   
         password_hash = row[3]
         #   print(type(id))
         binary_salt = base64.b64decode((salt.encode("utf-8")))

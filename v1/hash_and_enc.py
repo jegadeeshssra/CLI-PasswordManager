@@ -42,7 +42,7 @@ def encrypt_AES_GCM( plaintext: bytes, login_password_hash : bytes):
     ciphertext , auth_tag = aes_cipher.encrypt_and_digest(plaintext)
     return ( kdf_salt , ciphertext , aes_cipher.nonce , auth_tag)
 
-def decrypt_AES_GCM( login_password_hash: bytes, kdf_salt: bytes, ciphertext: bytes, IV: bytes, auth_tag: bytes ):
+def decrypt_AES_GCM( login_password_hash: bytes,    
     secret_key = scrypt.hash(login_password_hash,kdf_salt,N=16384,r=8,p=1,buflen=32)
     aes_cipher = AES.new(secret_key , AES.MODE_GCM , IV)
     plaintext = aes_cipher.decrypt_and_verify(ciphertext,auth_tag)
@@ -210,4 +210,4 @@ def decrypt_AES_GCM( login_password_hash: bytes, kdf_salt: bytes, ciphertext: by
 # - The **nonce** and **authentication tag** ensure the integrity and authenticity of the encrypted data.
 # - The `binascii.hexlify` function is used to display binary data in a human-readable hexadecimal format.
 
-# Let me know if you need further clarification!
+# Let me know if you need further clarification!    
