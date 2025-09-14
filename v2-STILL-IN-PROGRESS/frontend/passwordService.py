@@ -53,6 +53,22 @@ class KeyService:
 
     @staticmethod
     def store_KEK(key_encrypt_key: str, DEK_ciphertext: bytes, kdf_salt: bytes, nonce: bytes, auth_tag: bytes):
+        app_name = "secure"
+        if os.name == 'nt':
+            base_dir = Path(os.environ['APPDATA'])
+        elif os.name == 'posix':
+            base_dir = Path.home()
+        else:
+            base_dir = Path.cwd()
+
+        app_dir = base_dir / app_name
+        app_dir.mkdir(parents=True, exist_ok=True)
+        config_file = app_dir / "user_config.json"
+
+        print("OS - ",os.name)
+        print("AppDIR - ",app_dir)
+        print("ConfigFile - ",config_file)
+
         return True
     
     @staticmethod
