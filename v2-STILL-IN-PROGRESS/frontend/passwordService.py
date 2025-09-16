@@ -69,6 +69,22 @@ class KeyService:
         print("AppDIR - ",app_dir)
         print("ConfigFile - ",config_file)
 
+        storage_data = {
+            "version": "1.0",
+            "user_id": 1,
+            "kdf_parameters": {
+                "algorithm": "argon2id",
+                "time_cost": 16,
+                "memory_cost": 32768,  # 32MB 
+                "parallelism": 2,
+                "hash_len": 32,
+                "salt_len": 16
+            }
+        }
+
+        with open(config_file, 'w') as f:
+            json.dump(storage_data,f,indent = 2)
+
         return True
     
     @staticmethod
