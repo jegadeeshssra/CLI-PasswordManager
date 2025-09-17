@@ -7,7 +7,7 @@ class HashingService:
         return os.urandom(32)
 
     @staticmethod
-    def generate_auth_hash(master_password: str):
+    def generate_auth_hash(master_password: str) -> str:
         argon2Hasher = argon2.PasswordHasher(
             time_cost=15, 
             memory_cost=2**15, 
@@ -19,7 +19,7 @@ class HashingService:
         return auth_hash
     
     @staticmethod
-    def verify_auth_hash(master_password: str, auth_hash: str):
+    def verify_auth_hash(master_password: str, auth_hash: str) -> bool:
         argon2Hasher = argon2.PasswordHasher(
             time_cost=15, 
             memory_cost=2**15, 

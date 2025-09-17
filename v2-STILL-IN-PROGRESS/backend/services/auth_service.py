@@ -53,17 +53,11 @@ class AuthService:
                 status_code = 400, 
                 detail = "Email is already registered"
                 )
-        
-        # Convert the master_password into hash with salt
-        password_and_salt = self.pwd_service.hash_password(
-            user_data.master_password,
-            self.pwd_service.salt_generation()
-            )
 
         data = {
             "email" : user_data.email,
-            "hashed_password" : password_and_salt["key"],
-            "salt" : password_and_salt["salt"]
+            "hashed_password" : user_data.hashed_master_password,
+            "salt" : user_data.KEK_salt
         }
         # Send the data to store it in db
         if self.user_repo.create_user(data):

@@ -8,7 +8,8 @@ from pydantic import BaseModel , field_validator
 
 class UserCreate(BaseModel):
     email: str
-    master_password: str
+    hashed_master_password: str
+    KEK_salt: str
 
     @field_validator("email")
     def email_to_lower(cls, value: str) -> str:

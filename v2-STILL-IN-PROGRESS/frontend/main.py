@@ -30,27 +30,26 @@ def register() -> bool:
     try:
         email    = input("Enter the email : ") 
         master_password = input("Enter the Master Password : ")
-
-        user_data = UserData( email = email, master_password = master_password)
+        hashed_master_password = HashingService.generate_auth_hash(master_password)
+        KEK_binary_salt = KeyService.generate_data_encrypt_key()
+        user_data = UserData( email = email, hashed_master_password = master_password, KEK = (base64.b64encode(KEK_binary_salt)).decode("utf-8"))
 
         response = requests.post(f'{URL}/auth/register',json=user_data)
+
         res_body = response.json() # json to dict
         if response.status_code == 200:
-            print("------You are REGISTERED------")
+            if KeyService.process_and_store_DEK(master_password, KEK_binary_salt)
+                print("------You are REGISTERED------")
+            else:
+                raise "Error in processing DEK"
         else:
             print("------------------------------")
             print(res_body["detail"])
             print("------------------------------")
-            print()
-            print()
     except ValidationError as e:
         print(f"❌ Validation error: {e.errors()[0]['msg']}")
-        print()
-        print()
     except Exception as e:
         print(f"❌ Error: {e}")
-        print()
-        print()
     return 1
 
 def login() -> str(Optional):
