@@ -58,30 +58,33 @@ def login() -> str(Optional):
         master_password = input("Enter the Master Password : ")
 
         # Validate email and password
-        login_data = UserData(email=email,master_password=master_password)
+        login_data = UserLoginData(email = email)
         print(type(login_data)) # custom class which is NON JSON serializable
         response = requests.post(f"{URL}/auth/login",json=login_data.model_dump())      # model_dump() - converts the pydantic class type to dictionary
         #print(response.json()) # Type(if empty) - <class 'requests.models.Response'>
         #print(response.json().get("message","Login Failed")) # response.json(): Parses the JSON response from the server into a Python dictionary
         res_body = response.json() # json to dict
-        print(res_body) # keys - 'userid' , 'detail'
-        if response.status_code == 200:
+        print(res_body) # keys - 'userid' , 'hashed_master_password', 'KEK_salt'
+        if HashingService.verify_auth_hash( master_password, res_body["hashed_master_password"]) :
             print("------You are LOGGED IN------")
-        else:
+            return {
+                "userid" : res_body["userid"],
+                "master_password" : master_password,
+                "KEK_salt" : res_body["KEK_salt"]
+            }
+        elif "detail" in res_body:
             print("------------------------------")
             print(res_body["detail"])
             print("------------------------------")
-            print()
-            print()
-        return res_body["userid"]
+        else:
+            print("------------------------------")
+            print("Invalid Credentials")
+            print("------------------------------")
+        return False
     except ValidationError as e:
         print(f"❌ Validation error: {e.errors()[0]['msg']}")
-        print()
-        print()
     except Exception as e:
         print(f"❌ Error: {e}")
-        print()
-        print()
     return 0
 
 def user_homepage() -> int:
@@ -98,9 +101,9 @@ def user_homepage() -> int:
             print("------RETRY - Invalid Input-------")
     return initial_option
 
-def user_main(user_id: str):
+def user_main(confid_user_data: dict):
     while True:
-        user_functions = UserFunctions(user_id)
+        user_functions = UserFunctions(confid_user_data)
         initial_option = user_homepage(user_id)
         if initial_option == 1:
             user_functions(initial_option)
@@ -108,12 +111,15 @@ def user_main(user_id: str):
             return 1
 
 class UserFunctions:
-    def __init__(self,user_id: str):
-        self.user_id = user_id
+    def __init__(self,confid_user_data: dict):
+        self.user_id = confid_user_data["user_id"]
+        self.master_password = confid_user_data["master_password"]
+        self.KEK_salt = confid_user_data["KEK_salt"]
     
     def show_passwords(self):
         response = requests.get(f"{URL}/user/passwords",json=self.user_id)
         res = response.json()
+
         # retrieve all the passwords in list wihtin a dictionary
 
         return
@@ -125,7 +131,14 @@ class UserFunctions:
             application_name=application_name,
             app_password=app_password 
             )
-        response = requests.post(f"{URL}/user/passwords",json=app_data.model_dump())
+        confid_app_data = EncryptDecryptService.encrypt_app_password(
+            self.master_password,
+            self.KEK_salt,
+            app_password
+        )
+        confid_app_data["user_id"] = self.user_id
+        confid_app_data["application_name"] = applciation_name
+        response = requests.post(f"{URL}/user/passwords",json=confid_app_data.model_dump())
         return
     
     def update_password(self):
@@ -143,9 +156,10 @@ def main():
         initial_option = entrypoint()
         
         if(initial_option == 1):
-            userid = login()
-            if user_id != 0 :
-                user_main(user_id)
+            confid_user_data = login()
+            if confid_user_data != 0 :
+                user_main(confid_user_data)
+
 
         elif(initial_option == 2):
             register()

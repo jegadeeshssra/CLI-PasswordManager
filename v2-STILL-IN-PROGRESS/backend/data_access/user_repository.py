@@ -123,6 +123,7 @@ class CrudRepository:
 
     def add_password(self, app_data: UserAppData):
         try:
+            entryid = str(uuid.uuid4())
             add_query = f"""
             INSERT INTO {DATASTORE_TABLE_NAME}( entryid, userid, application_name, salt, app_password, iv, auth_tag)
             values (%s,%s,%s,%s,%s,%s,%s)

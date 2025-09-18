@@ -22,7 +22,6 @@ class UserCreateInStorage(BaseModel):
 
 class UserLogin(BaseModel):
     email: str
-    master_password: str
 
     @field_validator("email")
     def email_to_lower(cls, value: str) -> str:
@@ -36,8 +35,7 @@ class UserLogin(BaseModel):
 class UserId(BaseModel):
     userid: str
 
-class UserAppData(BaseModel):
-    entryid: str
+class ConfidAppData(BaseModel):
     userid: str
     application_name: str
     salt: str

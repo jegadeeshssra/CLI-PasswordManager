@@ -1,4 +1,5 @@
 import argon2 , os
+import binascii , base64
 
 class HashingService:
 
@@ -52,52 +53,108 @@ class KeyService:
         return hash
 
     @staticmethod
-    def store_KEK(key_encrypt_key: str, DEK_ciphertext: bytes, kdf_salt: bytes, nonce: bytes, auth_tag: bytes):
-        app_name = "secure"
+    def process_and_store_DEK(master_password: str, KEK_binary_salt: bytes):
+        
+        # Generating KEK using KDF
+        KEK = KeyService.generate_key_encrypt_key(
+            master_password, 
+            KEK_binary_salt
+            )
+        # Generating DEK 
+        DEK_raw_bytes =  KeyService.generate_data_encrypt_key()
+        # Ecrypting DEK with KEK as key
+        encrypted_msg = EncryptDecryptService.encrypt_AES_GCM(
+            (base64.b64encode(DEK_raw_bytes)).decode("utf-8"),
+            KEK
+        )
+        ( kdf_salt , DEK_ciphertext , nonce , auth_tag ) = encrypted_msg
+
+        app_name = ".secure_app"
         if os.name == 'nt':
-            base_dir = Path(os.environ['APPDATA'])
+            base_dir = Path(os.environ['USERPROFILE'])
         elif os.name == 'posix':
             base_dir = Path.home()
         else:
             base_dir = Path.cwd()
 
         app_dir = base_dir / app_name
-        app_dir.mkdir(parents=True, exist_ok=True)
+        if not Path(app_dir).exists():
+            app_dir.mkdir(parents=True, exist_ok=True)
         config_file = app_dir / "user_config.json"
+        #config_file = app_dir / f"user_config_{userid}.json"
 
         print("OS - ",os.name)
         print("AppDIR - ",app_dir)
         print("ConfigFile - ",config_file)
 
-        storage_data = {
-            "version": "1.0",
-            "user_id": 1,
-            "kdf_parameters": {
-                "algorithm": "argon2id",
-                "time_cost": 16,
-                "memory_cost": 32768,  # 32MB 
-                "parallelism": 2,
-                "hash_len": 32,
-                "salt_len": 16
+        key_data = {
+            #"user_id": 1,
+            "DEK_ciphertext" : DEK_ciphertext,
+            "kdf_parameters" : {
+                "kdf_salt" : kdf_salt,
+                "nonce" : nonce,
+                "auth_tag" : auth_tag
             }
         }
-
-        with open(config_file, 'w') as f:
-            json.dump(storage_data,f,indent = 2)
-
+        for open(config_file,'w') as f:
+            json.dump(key_data,f,indent = 2)
         return True
     
     @staticmethod
-    def retrieve_KEK():
-        return {
-            "key_encrypt_key" : key_encrypt_key,
-            "DEK_ciphertext" : DEK_ciphertext,
-            "kdf_salt" : kdf_salt,
-            "nonce" : nonce,
-            "auth_tag" : auth_tag 
-        }
+    def retrieve_DEK() -> dict:
+        app_name = ".secure_app"
+        if os.name == 'nt':
+            base_dir = Path(os.environ['USERPROFILE'])
+        elif os.name == 'posix':
+            base_dir = Path.home()
+        else:
+            base_dir = Path.cwd()
+
+        app_dir = base_dir / app_name
+        config_file = app_dir / "user_config.json"
+        #config_file = app_dir / f"user_config_{userid}.json"
+
+        print("OS - ",os.name)
+        print("AppDIR - ",app_dir)
+        print("ConfigFile - ",config_file)
+
+        if not config_file.exists():
+            raise FileNotFoundError("No stored encryption keys found")
+
+        with open(config_file, 'r') as f:
+            key_data = json.load(f)
+
+        return key_data
 
 class EncryptDecryptService:
+
+    @staticmethod
+    def encrypt_app_password(master_password: str, KEK_salt: str, app_password: str):
+        # Gnerate the same KEK using master_password and salt
+        raw_KEK_salt = base64.b64decode((KEK_salt).encode("utf-8"))
+        raw_KEK = KeyService.generate_key_encrypt_key(master_password,raw_KEK_salt) # str
+        # Retrieve the DEK_ciphertext and OTHER Params for decrypting the ciphertext to get DEK
+        raw_user_config = KeyService.retrieve_DEK()
+        DEK = EncryptDecryptService.decrypt_AES_GCM(
+            raw_KEK,
+            raw_user_config["kdf_parameters"]["kdf_salt"],
+            raw_user_config["DEK_ciphertext"],
+            raw_user_config["kdf_parameters"]["nonce"],
+            raw_user_config["kdf_parameters"]["auth_tag"]
+        )
+
+        encrypted_msg = EncryptDecryptService.encrypt_AES_GCM(
+            app_password,
+            DEK
+            )
+        ( kdf_salt , app_pwd_ciphertext , nonce , auth_tag ) = encrypted_msg
+        return {
+            "app_password_ciphertext" : app_pwd_ciphertext,
+            "kdf_salt" : kdf_salt,
+            "nonce" : nonce,
+            "auth_tag" : auth_tag
+        }
+
 
     @staticmethod
     def encrypt_AES_GCM( plaintext: str, initial_key: bytes):

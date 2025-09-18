@@ -5,6 +5,9 @@ class UserData(BaseModel):
     hashed_master_password: str
     KEK_salt : str
 
+class UserLoginData(BaseModel):
+    email: EmailStr
+
 class UserPasswordData(BaseModel):
     application_name: str
     app_password: str
