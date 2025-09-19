@@ -40,8 +40,11 @@ class ConfidAppData(BaseModel):
     application_name: str
     salt: str
     app_password: str
-    iv: str
+    nonce: str
     auth_tag: str
+    replace: Optional[str]
+
+
 
     
 

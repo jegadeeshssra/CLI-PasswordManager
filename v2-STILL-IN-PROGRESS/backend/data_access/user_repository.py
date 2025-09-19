@@ -1,6 +1,6 @@
 # Code to access data
 import psycopg2 , os
-from models.user import UserCreateInStorage , UserAppData
+from models.user import UserCreateInStorage , ConfidAppData
 from db_ops.db_connection import DatabaseConnection
 from .exceptions import DatabaseOperationError, DatabaseIntegrityError
 
@@ -96,7 +96,7 @@ class CrudRepository:
                 "Failed to retrieve user passwords"
                 ) from e 
     
-    def application_exists(self, userid: str, application_name: str):
+    def application_exists(self, userid: str, application_name: str) -> list:
         try:
             check_query = f"""
             SELECT * FROM {DATASTORE_TABLE_NAME} WHERE userid=%s AND application_name=%s;
@@ -121,7 +121,7 @@ class CrudRepository:
                 "Failed to retrieve user data"
                 ) from e    
 
-    def add_password(self, app_data: UserAppData):
+    def add_password(self, app_data: ConfidAppData):
         try:
             entryid = str(uuid.uuid4())
             add_query = f"""
@@ -129,12 +129,12 @@ class CrudRepository:
             values (%s,%s,%s,%s,%s,%s,%s)
             """
             self.db.cursor.execute(add_query,( 
-                    app_data["entryid"], 
+                    entryid, 
                     app_data["userid"], 
-                    app_data["app_name"], 
+                    app_data["application_name"], 
                     app_data["salt"],
                     app_data["app_password"], 
-                    app_data["IV"], 
+                    app_data["nonce"], 
                     app_data["auth_tag"]
                     ))
             self.db.connection.commit()
@@ -143,9 +143,11 @@ class CrudRepository:
         except psycopg2.Error as e:
             self.db.connection.rollback()
             print(f"Database error: {e}")
-            return False
+            raise DatabaseOperationError(
+                "Unable to add password"
+                ) from e   
     
-    def update_password(self, app_data: UserAppData):
+    def update_password(self, app_data: ConfidAppData):
         try:
             update_query = f"""
             UPDATE {DATASTORE_TABLE_NAME}
@@ -155,7 +157,7 @@ class CrudRepository:
             self.db.cursor.execute(update_query,(
                 app_data["salt"],
                 app_data["app_password"], 
-                app_data["IV"], 
+                app_data["nonce"], 
                 app_data["auth_tag"],
                 app_data["userid"],
                 app_data["applciation_name"]

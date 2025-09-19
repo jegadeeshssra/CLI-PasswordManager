@@ -11,6 +11,11 @@ def get_all_passwords(user_id: UserId):
     # FastAPI automatically validates user_data against UserCreate schema
     return crud_service.get_all_passwords(user_id)  # Delegate to service layer
 
+@router.post("/passwords")
+def add_password(confid_app_data: ConfidAppData):
+    crud_service = CrudService()
+    return crud_service.add_password(confid_app_data)
+
 # actual_path - /auth/login
 # @router.post("/login")
 # def login(login_data: UserLogin):

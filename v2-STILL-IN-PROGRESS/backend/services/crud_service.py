@@ -29,10 +29,20 @@ class CrudService:
             )
 
 
-    def add_password(self, app_data: UserAppData):
+    def add_password(self, app_data: ConfidAppData):
         try:
-            if self.crud_repo.application_exists( UserAppData["userid"], UserAppData["application_name"]):
-                
+            if "replace" not in app_data:
+                if self.crud_repo.application_exists( app_data["userid"], app_dir["application_name"]):
+                    raise HTTPException(
+                        status_code = 400,
+                        detail = "Application name is already used"
+                    )
+            if self.crud_repo.add_password(app_data):
+                return {
+                    "userid" : app_data["user_id"]
+                    "detail" : "Password Added successfully"
+                }
+
         except DatabaseOperationError as e:
             raise HTTPException(
                 status_code = 503,

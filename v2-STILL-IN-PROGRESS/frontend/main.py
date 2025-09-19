@@ -106,7 +106,7 @@ def user_main(confid_user_data: dict):
         user_functions = UserFunctions(confid_user_data)
         initial_option = user_homepage(user_id)
         if initial_option == 1:
-            user_functions(initial_option)
+            
         elif:
             return 1
 
@@ -127,19 +127,35 @@ class UserFunctions:
     def add_password(self):
         application_name = input("Enter the Application Name (email, website, app) : ")
         app_password = input("Enter the password for the applciation :")
-        app_data = UserPasswordData(
-            application_name=application_name,
-            app_password=app_password 
-            )
+
         confid_app_data = EncryptDecryptService.encrypt_app_password(
             self.master_password,
             self.KEK_salt,
             app_password
         )
         confid_app_data["user_id"] = self.user_id
-        confid_app_data["application_name"] = applciation_name
+        confid_app_data["application_name"] = application_name
+
         response = requests.post(f"{URL}/user/passwords",json=confid_app_data.model_dump())
-        return
+        response.json()
+        if response.status_code == 200:
+            return True
+        elif response.status_code == 400:
+            choice = input("Application is already used. Do you want to replace the password for same application ?? yes/y OR no/n")
+            if choice.lower() in ["y","yes"]:
+                confid_app_data["replace"] = "yes"
+                second_res = requests.post(f"{URL}/user/passwords",json = confid_app_data.model_dump())
+                second_res.json()
+                if second_res.status_code == 503:
+                    print("Password has been added")
+                    return True
+                else:
+                    print(f"{second_res.detail}")
+            else:
+                return False
+        else:
+            print(f"{response.detail}")
+            return False
     
     def update_password(self):
         return
