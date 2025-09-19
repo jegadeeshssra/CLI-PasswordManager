@@ -165,6 +165,29 @@ class EncryptDecryptService:
             "auth_tag" : KeyService.bytes_to_str(auth_tag)
         }
 
+    @staticmethod
+    def decrypt_app_password(master_password: str, KEK_salt: str, app_password_ciphertext: str, kdf_salt: str, nonce: str, auth_tag: str) -> str:
+        # Generate the same KEK using master_password and salt
+        raw_KEK_salt = KeyService.str_to_bytes(KEK_salt)
+        KEK = KeyService.generate_key_encrypt_key(master_password,raw_KEK_salt) # str
+        # Retrieve the DEK_ciphertext and OTHER Params for decrypting the ciphertext to get DEK
+        user_config = KeyService.retrieve_DEK()
+        DEK = EncryptDecryptService.decrypt_AES_GCM(
+            KEK.encode("utf-8"),
+            user_config["kdf_parameters"]["kdf_salt"],
+            user_config["DEK_ciphertext"],
+            user_config["kdf_parameters"]["nonce"],
+            user_config["kdf_parameters"]["auth_tag"]
+        )
+
+        decrypted_msg = EncryptDecryptService.decrypt_AES_GCM(
+            KeyService.str_to_bytes(DEK),
+            KeyService.str_to_bytes(kdf_salt),
+            KeyService.str_to_bytes(app_password_ciphertext),
+            KeyService.str_to_bytes(nonce),
+            KeyService.str_to_bytes(auth_tag)
+        )
+        return decrypted_msg
 
     @staticmethod
     def encrypt_AES_GCM( plaintext: str, initial_key: bytes):

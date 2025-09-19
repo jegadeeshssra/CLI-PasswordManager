@@ -102,13 +102,21 @@ def user_homepage() -> int:
     return initial_option
 
 def user_main(confid_user_data: dict):
+    user_functions = UserFunctions(confid_user_data)
     while True:
-        user_functions = UserFunctions(confid_user_data)
-        initial_option = user_homepage(user_id)
+        initial_option = user_homepage()
         if initial_option == 1:
-            
-        elif:
-            return 1
+            user_functions.show_passwords()
+        elif initial_option == 2:
+            user_functions.add_password()
+        elif initial_option == 3:
+            user_functions.update_password()
+        elif initial_option == 4:
+            user_functions.delete_password()
+        else:
+            print("Exiting...")
+            break
+
 
 class UserFunctions:
     def __init__(self,confid_user_data: dict):
@@ -175,8 +183,6 @@ def main():
             confid_user_data = login()
             if confid_user_data != 0 :
                 user_main(confid_user_data)
-
-
         elif(initial_option == 2):
             register()
         else:
