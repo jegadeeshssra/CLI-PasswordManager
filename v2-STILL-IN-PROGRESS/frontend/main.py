@@ -166,6 +166,21 @@ class UserFunctions:
             return False
     
     def update_password(self):
+        application_name = input("Enter the Application Name to be UPDATED : ")
+        app_password = input("Enter the NEW Password for the application :")
+
+        confid_app_data = EncryptDecryptService.encrypt_app_password(
+            self.master_password,
+            self.KEK_salt,
+            app_password
+        )
+        confid_app_data["user_id"] = self.user_id
+        confid_app_data["application_name"] = application_name
+
+        response = requests.update(f"{URL}/user/passwords",json=confid_app_data.model_dump())
+
+----------------------------------------------------------------------------------left here
+
         return
     
     def delete_password(self):
