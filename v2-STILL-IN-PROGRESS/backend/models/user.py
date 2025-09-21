@@ -1,4 +1,5 @@
 from pydantic import BaseModel , field_validator
+from typing import Optional
 
 # BaseModel is the fundamental building block of Pydantic. It's a class that provides:
 # Data validation - Ensures data conforms to specified types and constraints
@@ -34,6 +35,10 @@ class UserLogin(BaseModel):
 
 class UserId(BaseModel):
     userid: str
+
+class DeleteAppData(BaseModel):
+    userid: str
+    application_name: str
 
 class ConfidAppData(BaseModel):
     userid: str

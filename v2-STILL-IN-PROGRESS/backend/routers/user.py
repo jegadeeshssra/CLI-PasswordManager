@@ -16,6 +16,16 @@ def add_password(confid_app_data: ConfidAppData):
     crud_service = CrudService()
     return crud_service.add_password(confid_app_data)
 
+@router.update("/passwords")
+def update_password(confid_app_data: ConfidAppData):
+    crud_service = CrudService()
+    return crud_service.update_password(confid_app_data)
+
+@router.delete("/passwords")
+def delete_password(delete_app_data: DeleteAppData):
+    crud_service = CrudService()
+    return crud_service.delete_password(delete_app_data)
+
 # actual_path - /auth/login
 # @router.post("/login")
 # def login(login_data: UserLogin):

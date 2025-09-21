@@ -11,3 +11,7 @@ class UserLoginData(BaseModel):
 class UserPasswordData(BaseModel):
     application_name: str
     app_password: str
+
+class DeleteAppData(BaseModel):
+    userid: str
+    application_name: str    

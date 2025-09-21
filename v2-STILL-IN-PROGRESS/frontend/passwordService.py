@@ -70,14 +70,16 @@ class KeyService:
             KEK_binary_salt
             )
         # Generating DEK 
+        print("here-1")
         DEK_raw_bytes =  KeyService.generate_data_encrypt_key()
         # Ecrypting DEK with KEK as key
         encrypted_msg = EncryptDecryptService.encrypt_AES_GCM(
-            (base64.b64encode(DEK_raw_bytes)).decode("utf-8"),
+            DEK_raw_bytes,
             KEK.encode("utf-8")
         )
+        print("here-2.3     ")
         ( raw_kdf_salt , raw_DEK_ciphertext , raw_nonce , raw_auth_tag ) = encrypted_msg
-
+        print("here-3")
         app_name = ".secure_app"
         if os.name == 'nt':
             base_dir = Path(os.environ['USERPROFILE'])
@@ -106,7 +108,7 @@ class KeyService:
                 "auth_tag" : KeyService.bytes_to_str(auth_tag)
             }
         }
-        for open(config_file,'w') as f:
+        with open(config_file,'w') as f:
             json.dump(key_data,f,indent = 2)
         return True
     
@@ -154,7 +156,7 @@ class EncryptDecryptService:
         )
 
         encrypted_msg = EncryptDecryptService.encrypt_AES_GCM(
-            app_password,
+            app_password.encode("utf-8"),
             KeyService.str_to_bytes(DEK)
             )
         ( kdf_salt , app_pwd_ciphertext , nonce , auth_tag ) = encrypted_msg
@@ -189,12 +191,15 @@ class EncryptDecryptService:
         )
         return decrypted_msg
 
+
     @staticmethod
-    def encrypt_AES_GCM( plaintext: str, initial_key: bytes):
+    def encrypt_AES_GCM( plaintext: bytes, initial_key: bytes):
         kdf_salt = os.urandom(16)
         secret_key = scrypt.hash(initial_key, kdf_salt, N=16384, r=8, p=1, buflen=32)
         aes_cipher = AES.new(secret_key , AES.MODE_GCM)
+        print("here-2")
         ciphertext , auth_tag = aes_cipher.encrypt_and_digest(plaintext)
+        print("here-2.1")
         return ( kdf_salt , ciphertext , aes_cipher.nonce , auth_tag)
     
     @staticmethod

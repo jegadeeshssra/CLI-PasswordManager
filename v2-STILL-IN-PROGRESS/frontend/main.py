@@ -1,13 +1,14 @@
-# from db_connection import get_database_connection
-# from hash_and_enc import hash_generation , encrypt_AES_GCM , decrypt_AES_GCM , str_to_bytes, bytes_to_str ,str_to_rawBytes ,rawBytes_to_str
-# from login_and_register import login , register
-# import base64
 import typer
-from Crypto.Cipher import AES
-import scrypt, os, binascii, argon2
-from models.user import UserData , UserPasswordData
-from pydantic import ValidationError
 # import re , uuid , time , random
+from Crypto.Cipher import AES
+import scrypt, os, binascii, argon2 , base64
+from pydantic import ValidationError
+from typing import Optional
+
+# from other programs
+from models.user import UserData , UserPasswordData
+from passwordService import HashingService , KeyService
+
 app = typer.Typer()
 
 import requests
@@ -32,13 +33,13 @@ def register() -> bool:
         master_password = input("Enter the Master Password : ")
         hashed_master_password = HashingService.generate_auth_hash(master_password)
         KEK_binary_salt = KeyService.generate_data_encrypt_key()
-        user_data = UserData( email = email, hashed_master_password = master_password, KEK = (base64.b64encode(KEK_binary_salt)).decode("utf-8"))
+        user_data = UserData( email = email, hashed_master_password = master_password, KEK_salt = (base64.b64encode(KEK_binary_salt)).decode("utf-8"))
 
-        response = requests.post(f'{URL}/auth/register',json=user_data)
+        response = requests.post(f'{URL}/auth/register',json=user_data.model_dump())
 
         res_body = response.json() # json to dict
         if response.status_code == 200:
-            if KeyService.process_and_store_DEK(master_password, KEK_binary_salt)
+            if KeyService.process_and_store_DEK(master_password, KEK_binary_salt):
                 print("------You are REGISTERED------")
             else:
                 raise "Error in processing DEK"
@@ -52,7 +53,7 @@ def register() -> bool:
         print(f"❌ Error: {e}")
     return 1
 
-def login() -> str(Optional):
+def login() -> Optional[str]:
     try:
         email    = input("Enter the email : ") 
         master_password = input("Enter the Master Password : ")
@@ -116,6 +117,7 @@ def user_main(confid_user_data: dict):
         else:
             print("Exiting...")
             break
+    return 1
 
 
 class UserFunctions:
@@ -123,14 +125,49 @@ class UserFunctions:
         self.user_id = confid_user_data["user_id"]
         self.master_password = confid_user_data["master_password"]
         self.KEK_salt = confid_user_data["KEK_salt"]
-    
+
     def show_passwords(self):
-        response = requests.get(f"{URL}/user/passwords",json=self.user_id)
-        res = response.json()
+        try: 
+            response = requests.get(f"{URL}/user/passwords",json=self.user_id)
+            res = response.json()
+            if res.status_code != 200:
+                print(f"{response["detail"]}")
+                return False
+            else:
+                rows = res["data"] # [[entryid, userid, application_name, salt, app_password, iv, auth_tag]]
+            # retrieve all the passwords in list within a dictionary
+            no_of_passwords - len(rows)
+            while(True):
+                try:
+                    print("Available applications:")
+                    for i in range(0,no_of_passwords):
+                        print(f"{i} - {rows[i]["application_name"]}")
+                    print(f"{no_of_passwords} - EXIT")
 
-        # retrieve all the passwords in list wihtin a dictionary
-
-        return
+                    option = int(input("\nEnter the App number to reveal that password : "))
+                    if option >= 0 and option < no_of_passwords:
+                        
+                        print(f"Application - {rows[option["application_name"]]}")
+                        decrypted_msg = EncryptDecryptService.decrypt_app_password(
+                            self.master_password,
+                            self.KEK_salt,
+                            rows[option]["app_password"],
+                            rows[option]["salt"],
+                            rows[option]["nonce"],
+                            rows[option]["auth_tag"]
+                        )
+                        print(f"Password - {decrypted_msg}")
+                        
+                    elif option == no_of_passwords:
+                        break
+                    else:       
+                        print("Enter a Valid Option")
+                except TypeError as e:
+                    print(f"❌ Type error: {e.errors()[0]['msg']}")
+                    print("Enter a Valid Option")
+        except Exception as e:
+            print(f"❌ Error: {e}")
+        return 1
     
     def add_password(self):
         application_name = input("Enter the Application Name (email, website, app) : ")
@@ -178,14 +215,33 @@ class UserFunctions:
         confid_app_data["application_name"] = application_name
 
         response = requests.update(f"{URL}/user/passwords",json=confid_app_data.model_dump())
-
-----------------------------------------------------------------------------------left here
-
-        return
+        response.josn()
+        if response.status_code == 200:
+            print(f"{response["detail"]}")
+            return True
+        else:
+            print(f"{response["detail"]}")
+            return False
     
     def delete_password(self):
-        return
-    
+        application_name = input("Enter the Application Name to be DELETED : ")
+        delete_app_data = {
+            "userid" : self.user_id,
+            "application_name" : applciation_name
+        }
+
+        response = requests.delete(
+            f"{URL}/user/passwords",
+            json = delete_app_data.model_dump()
+        )
+        response.json()
+        if response.status_code == 200:
+            print(f"{response["detail"]}")
+            return True
+        else:
+            print(f"{response["detail"]}")
+            return False
+
 
 
 
@@ -206,4 +262,4 @@ def main():
 
 if __name__ == "__main__":
     app()
-        
+    

@@ -18,7 +18,7 @@ class UserRepository:
         try:
             create_user_query = f"""
             INSERT INTO {CREDS_TABLE_NAME} (userid, email, master_password, salt) 
-            VALUES (%s, %s, %s, %s);
+            VALUES (%s  , %s, %s, %s);
             """
             self.db.cursor.execute(create_user_query,(userid,user_data["email"], user_data["hashed_password"], user_data["salt"]))
             self.db.connection.commit()
@@ -77,8 +77,9 @@ class UserRepository:
 class CrudRepository:
     def __init__(self):
         self.db = DatabaseConnection()
+        print("CreudRepository Initialized")
 
-    def get_all_passwords(self, userid: str) -> [list]:
+    def get_all_passwords(self, userid: str) -> [[]]:
         try:
             retrival_query = f"""
             SELECT * FROM {DATASTORE_TABLE_NAME} WHERE userid=%s;
@@ -168,7 +169,9 @@ class CrudRepository:
         except psycopg2.Error as e:
             self.db.connection.rollback()
             print(f"Database error: {e}")
-            return False
+            raise DatabaseOperationError(
+                "Unable to update the password"
+                ) from e   
 
     def delete_password(self, userid: str, app_name: str):
         try:
@@ -186,5 +189,6 @@ class CrudRepository:
         except psycopg2.Error as e:
             self.db.connection.rollback()
             print(f"Database error: {e}")
-            return False
-    
+            raise DatabaseOperationError(
+                "Unable to delete the password"
+                ) from e   

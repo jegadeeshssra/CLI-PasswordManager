@@ -16,7 +16,7 @@ class DatabaseConnection:
         
     def _intialize_connection(self):
         try:
-            self.connection = psycopg2.connect(
+            self.connection =   psycopg2.connect(
                 database = os.getenv("DB_NAME"),
                 user = os.getenv("DB_USER"),
                 password = os.getenv("DB_PASSWORD"),
