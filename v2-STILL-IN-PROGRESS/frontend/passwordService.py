@@ -1,6 +1,8 @@
 import argon2 , os
 from Crypto.Cipher import AES
-import binascii , base64 , scrypt 
+import binascii , base64 , scrypt , json
+from pathlib import Path
+
 
 class HashingService:
 
@@ -104,8 +106,8 @@ class KeyService:
             "DEK_ciphertext" : KeyService.bytes_to_str(raw_DEK_ciphertext),
             "kdf_parameters" : {
                 "kdf_salt" : KeyService.bytes_to_str(raw_kdf_salt),
-                "nonce" : KeyService.bytes_to_str(nonce),
-                "auth_tag" : KeyService.bytes_to_str(auth_tag)
+                "nonce" : KeyService.bytes_to_str(raw_nonce),
+                "auth_tag" : KeyService.bytes_to_str(raw_auth_tag)
             }
         }
         with open(config_file,'w') as f:

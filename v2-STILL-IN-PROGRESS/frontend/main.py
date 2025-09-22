@@ -33,7 +33,7 @@ def register() -> bool:
         master_password = input("Enter the Master Password : ")
         hashed_master_password = HashingService.generate_auth_hash(master_password)
         KEK_binary_salt = KeyService.generate_data_encrypt_key()
-        user_data = UserData( email = email, hashed_master_password = master_password, KEK_salt = (base64.b64encode(KEK_binary_salt)).decode("utf-8"))
+        user_data = UserData( email = email, hashed_master_password = hashed_master_password, KEK_salt = (base64.b64encode(KEK_binary_salt)).decode("utf-8"))
 
         response = requests.post(f'{URL}/auth/register',json=user_data.model_dump())
 
