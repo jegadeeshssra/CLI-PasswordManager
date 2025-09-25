@@ -1,7 +1,8 @@
 #from models.user
-from data_access.user_repository import UserRepository
+from data_access.user_repository import UserRepository , CrudRepository
 from data_access.exceptions import DatabaseOperationError, DatabaseIntegrityError
 from fastapi import HTTPException
+from models.user import UserCreate , UserCreateInStorage , ConfidAppData , DeleteAppData , UserLogin
 import bcrypt , base64
 
 class CrudService:
@@ -11,12 +12,13 @@ class CrudService:
 
     def get_all_passwords(self, userid: str):
         try:
+            print(userid)
             rows = self.crud_repo.get_all_passwords(userid)
             if rows == None:
-                return {
-                        "userid"  : userid,
-                        "detail" : "Add your first password"
-                    }
+                raise HTTPException(
+                    status_code = 404,
+                    detail = "Add Your First Password"
+                )
             return {
                 "userid" : userid,
                 "detail": "Data sent",
@@ -39,7 +41,7 @@ class CrudService:
                     )
             if self.crud_repo.add_password(app_data):
                 return {
-                    "userid" : app_data["user_id"]
+                    "userid" : app_data["userid"],
                     "detail" : "Password Added successfully"
                 }
 
@@ -54,7 +56,7 @@ class CrudService:
             if self.crud_repo.application_exists( app_data["userid"], app_data["applciation_name"]):
                 if self.crud_repo.update_password(app_data["userid"], app_data["application_name"]):
                     return {
-                        "userid" : app_data["user_id"]
+                        "userid" : app_data["userid"],
                         "detail" : "Password Updated successfully"
                     }
             else:
@@ -73,7 +75,7 @@ class CrudService:
             if self.crud_repo.application_exists( app_data["userid"], app_data["applciation_name"]):
                 if self.crud_repo.delete_password( data["userid"], data["application_name"]):
                     return {
-                        "userid" : app_data["user_id"]
+                        "userid" : app_data["userid"],
                         "detail" : "App Password deleted successfully"
                     }
             else:

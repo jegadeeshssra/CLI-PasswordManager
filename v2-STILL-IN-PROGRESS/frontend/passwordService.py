@@ -59,12 +59,12 @@ class KeyService:
             )
         # Without the salt parameter, it produces unique hash every single time for the same password
         hash = argon2Hasher.hash(master_password, salt= salt)
-        print("Argon2 hash (random salt):", hash)
+        #print("Argon2 hash (random salt):", hash)
         # key encryption key
         return hash
 
     @staticmethod
-    def process_and_store_DEK(master_password: str, KEK_binary_salt: bytes):
+    def process_and_store_DEK(email: str, master_password: str, KEK_binary_salt: bytes):
         
         # Generating KEK using KDF
         KEK = KeyService.generate_key_encrypt_key(
@@ -103,6 +103,7 @@ class KeyService:
         # json only accepts string
         key_data = {
             #"user_id": 1,
+            "Email" : email,
             "DEK_ciphertext" : KeyService.bytes_to_str(raw_DEK_ciphertext),
             "kdf_parameters" : {
                 "kdf_salt" : KeyService.bytes_to_str(raw_kdf_salt),

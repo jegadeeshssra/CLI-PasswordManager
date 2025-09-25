@@ -33,9 +33,6 @@ class UserLogin(BaseModel):
 #     id: str
 #     timestamp: datetime
 
-class UserId(BaseModel):
-    userid: str
-
 class DeleteAppData(BaseModel):
     userid: str
     application_name: str

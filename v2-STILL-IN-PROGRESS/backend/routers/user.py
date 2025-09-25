@@ -1,22 +1,22 @@
-from models.user import UserId
+from models.user import UserCreate , UserCreateInStorage , ConfidAppData , DeleteAppData , UserLogin
 from services.crud_service import CrudService
-from fastapi import APIRouter
+from fastapi import APIRouter , Query
 
 router = APIRouter(tags=["CrudService"])
 
 # actual_path - /user/passwords
 @router.get("/passwords")
-def get_all_passwords(user_id: UserId):
+def get_all_passwords(userid: str = Query(...) ):
     crud_service = CrudService()
     # FastAPI automatically validates user_data against UserCreate schema
-    return crud_service.get_all_passwords(user_id)  # Delegate to service layer
+    return crud_service.get_all_passwords(userid)  # Delegate to service layer
 
 @router.post("/passwords")
 def add_password(confid_app_data: ConfidAppData):
     crud_service = CrudService()
     return crud_service.add_password(confid_app_data)
 
-@router.update("/passwords")
+@router.put("/passwords")
 def update_password(confid_app_data: ConfidAppData):
     crud_service = CrudService()
     return crud_service.update_password(confid_app_data)

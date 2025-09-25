@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from typing import Optional
 
 # from other programs
-from models.user import UserData , UserPasswordData
+from models.user import UserData , UserPasswordData , UserLoginData
 from passwordService import HashingService , KeyService
 
 app = typer.Typer()
@@ -39,7 +39,7 @@ def register() -> bool:
 
         res_body = response.json() # json to dict
         if response.status_code == 200:
-            if KeyService.process_and_store_DEK(master_password, KEK_binary_salt):
+            if KeyService.process_and_store_DEK(email, master_password, KEK_binary_salt):
                 print("------You are REGISTERED------")
             else:
                 raise "Error in processing DEK"
@@ -60,26 +60,27 @@ def login() -> Optional[str]:
 
         # Validate email and password
         login_data = UserLoginData(email = email)
-        print(type(login_data)) # custom class which is NON JSON serializable
+        # print(type(login_data)) # custom class which is NON JSON serializable
         response = requests.post(f"{URL}/auth/login",json=login_data.model_dump())      # model_dump() - converts the pydantic class type to dictionary
         #print(response.json()) # Type(if empty) - <class 'requests.models.Response'>
         #print(response.json().get("message","Login Failed")) # response.json(): Parses the JSON response from the server into a Python dictionary
         res_body = response.json() # json to dict
-        print(res_body) # keys - 'userid' , 'hashed_master_password', 'KEK_salt'
-        if HashingService.verify_auth_hash( master_password, res_body["hashed_master_password"]) :
-            print("------You are LOGGED IN------")
-            return {
-                "userid" : res_body["userid"],
-                "master_password" : master_password,
-                "KEK_salt" : res_body["KEK_salt"]
-            }
-        elif "detail" in res_body:
-            print("------------------------------")
-            print(res_body["detail"])
-            print("------------------------------")
+        #print(res_body) # keys - 'userid' , 'hashed_master_password', 'KEK_salt'
+        if response.status_code == 200:
+            if HashingService.verify_auth_hash( master_password, res_body["hashed_master_password"]) :
+                print("------You are LOGGED IN------")
+                return {
+                    "user_id" : res_body["userid"],
+                    "master_password" : master_password,
+                    "KEK_salt" : res_body["KEK_salt"]
+                }
+            else:
+                print("------------------------------")
+                print("Invalid Credentials")
+                print("------------------------------")
         else:
             print("------------------------------")
-            print("Invalid Credentials")
+            print(res_body["detail"])
             print("------------------------------")
         return False
     except ValidationError as e:
@@ -128,10 +129,10 @@ class UserFunctions:
 
     def show_passwords(self):
         try: 
-            response = requests.get(f"{URL}/user/passwords",json=self.user_id)
+            response = requests.get(f"{URL}/user/passwords",params={"userid": self.user_id })
             res = response.json()
-            if res.status_code != 200:
-                print(f"{response["detail"]}")
+            if response.status_code != 200:
+                print(f"-------------------{res["detail"]}------------------------")
                 return False
             else:
                 rows = res["data"] # [[entryid, userid, application_name, salt, app_password, iv, auth_tag]]
@@ -214,7 +215,7 @@ class UserFunctions:
         confid_app_data["user_id"] = self.user_id
         confid_app_data["application_name"] = application_name
 
-        response = requests.update(f"{URL}/user/passwords",json=confid_app_data.model_dump())
+        response = requests.put(f"{URL}/user/passwords",json=confid_app_data.model_dump())
         response.josn()
         if response.status_code == 200:
             print(f"{response["detail"]}")

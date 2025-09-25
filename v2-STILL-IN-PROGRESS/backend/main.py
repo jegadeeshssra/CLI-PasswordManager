@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 # Import router module , auth is a custom made name
-from routers import auth
+from routers import auth , user
 
 app = FastAPI(
     title="Auth API",
@@ -11,8 +11,10 @@ app = FastAPI(
 @app.get("/")
 def root():
     return "The API is successfully working"
+
 # Include routers
 app.include_router(auth.router, prefix="/auth")  
+app.include_router(user.router, prefix="/user")
 # All auth routes start with /auth and it looks for auth.py within routers DIR
 # - main.py imports the auth module from routers package
 # - auth.router refers to the APIRouter instance created in routers/auth.py
