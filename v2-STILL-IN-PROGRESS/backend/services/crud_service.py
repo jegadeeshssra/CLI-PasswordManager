@@ -12,7 +12,7 @@ class CrudService:
 
     def get_all_passwords(self, userid: str):
         try:
-            print(userid)
+            #   print(userid)
             rows = self.crud_repo.get_all_passwords(userid)
             if rows == None:
                 raise HTTPException(
@@ -31,14 +31,15 @@ class CrudService:
             )
 
 
-    def add_password(self, app_data: ConfidAppData):
+    def add_password(self, data: ConfidAppData):
         try:
-            if "replace" not in app_data:
-                if self.crud_repo.application_exists( app_data["userid"], app_data["application_name"]):
-                    raise HTTPException(
-                        status_code = 400,
-                        detail = "Application name is already used"
-                    )
+            app_data = data.model_dump()
+            #print(app_data)
+            if self.crud_repo.application_exists( app_data["userid"], app_data["application_name"]):
+                raise HTTPException(
+                    status_code = 400,
+                    detail = "Application name is already used"
+                )
             if self.crud_repo.add_password(app_data):
                 return {
                     "userid" : app_data["userid"],
@@ -50,11 +51,17 @@ class CrudService:
                 status_code = 503,
                 detail = "Service temporarily unavailable" 
             )
+        except DatabaseIntegrityError as e:
+            raise HTTPException(
+                status_code = 409,
+                detail = "Too many entries for the same application name"
+            )
 
-    def update_password(self, app_data: ConfidAppData):
+    def update_password(self, data: ConfidAppData):
         try:
-            if self.crud_repo.application_exists( app_data["userid"], app_data["applciation_name"]):
-                if self.crud_repo.update_password(app_data["userid"], app_data["application_name"]):
+            app_data = data.model_dump()
+            if self.crud_repo.application_exists( app_data["userid"], app_data["application_name"]):
+                if self.crud_repo.update_password(app_data):
                     return {
                         "userid" : app_data["userid"],
                         "detail" : "Password Updated successfully"
@@ -62,7 +69,7 @@ class CrudService:
             else:
                     raise HTTPException(
                         status_code = 400,
-                        detail = "Application name is does not exists"
+                        detail = "Application name does not exists"
                     )
         except DatabaseOperationError as e:
             raise HTTPException(
@@ -72,8 +79,9 @@ class CrudService:
 
     def delete_password(self, data: DeleteAppData):
         try:
-            if self.crud_repo.application_exists( app_data["userid"], app_data["applciation_name"]):
-                if self.crud_repo.delete_password( data["userid"], data["application_name"]):
+            app_data = data.model_dump()
+            if self.crud_repo.application_exists( app_data["userid"], app_data["application_name"]):
+                if self.crud_repo.delete_password( app_data["userid"], app_data["application_name"]):
                     return {
                         "userid" : app_data["userid"],
                         "detail" : "App Password deleted successfully"

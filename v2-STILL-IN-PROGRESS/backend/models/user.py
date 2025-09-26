@@ -44,7 +44,6 @@ class ConfidAppData(BaseModel):
     app_password: str
     nonce: str
     auth_tag: str
-    replace: Optional[str]
 
 
 

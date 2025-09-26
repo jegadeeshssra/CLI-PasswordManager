@@ -7,7 +7,7 @@ from typing import Optional
 
 # from other programs
 from models.user import UserData , UserPasswordData , UserLoginData
-from passwordService import HashingService , KeyService
+from passwordService import HashingService , KeyService , EncryptDecryptService
 
 app = typer.Typer()
 
@@ -137,25 +137,26 @@ class UserFunctions:
             else:
                 rows = res["data"] # [[entryid, userid, application_name, salt, app_password, iv, auth_tag]]
             # retrieve all the passwords in list within a dictionary
-            no_of_passwords - len(rows)
+            no_of_passwords = len(rows)
+            #print(rows)
             while(True):
                 try:
                     print("Available applications:")
+                    # entryid|userid|application_name|salt|app_password|iv|auth_tag
                     for i in range(0,no_of_passwords):
-                        print(f"{i} - {rows[i]["application_name"]}")
+                        print(f"{i} - {rows[i][2]}")    # 2 - application_name
                     print(f"{no_of_passwords} - EXIT")
 
                     option = int(input("\nEnter the App number to reveal that password : "))
                     if option >= 0 and option < no_of_passwords:
-                        
-                        print(f"Application - {rows[option["application_name"]]}")
+                        print(f"Application - {rows[option][2]}")
                         decrypted_msg = EncryptDecryptService.decrypt_app_password(
                             self.master_password,
                             self.KEK_salt,
-                            rows[option]["app_password"],
-                            rows[option]["salt"],
-                            rows[option]["nonce"],
-                            rows[option]["auth_tag"]
+                            rows[option][4],    # 4 - app_password
+                            rows[option][3],    # 3 - salt
+                            rows[option][5],    # 5 - iv
+                            rows[option][6]     # 6 - auth_tag
                         )
                         print(f"Password - {decrypted_msg}")
                         
@@ -164,7 +165,7 @@ class UserFunctions:
                     else:       
                         print("Enter a Valid Option")
                 except TypeError as e:
-                    print(f"❌ Type error: {e.errors()[0]['msg']}")
+                    print(f"❌ Type error: {e}")
                     print("Enter a Valid Option")
         except Exception as e:
             print(f"❌ Error: {e}")
@@ -179,28 +180,34 @@ class UserFunctions:
             self.KEK_salt,
             app_password
         )
-        confid_app_data["user_id"] = self.user_id
+        confid_app_data["userid"] = self.user_id
         confid_app_data["application_name"] = application_name
-
-        response = requests.post(f"{URL}/user/passwords",json=confid_app_data.model_dump())
-        response.json()
+        print()
+        response = requests.post(
+            f"{URL}/user/passwords",
+            json=confid_app_data
+            )
+        res = response.json()
         if response.status_code == 200:
+            print("----------------------Password has been added-----------------------------")
             return True
         elif response.status_code == 400:
             choice = input("Application is already used. Do you want to replace the password for same application ?? yes/y OR no/n")
             if choice.lower() in ["y","yes"]:
-                confid_app_data["replace"] = "yes"
-                second_res = requests.post(f"{URL}/user/passwords",json = confid_app_data.model_dump())
-                second_res.json()
+                second_res = requests.put(
+                    f"{URL}/user/passwords",
+                    json = confid_app_data
+                    )
+                sec_res = second_res.json()
                 if second_res.status_code == 503:
-                    print("Password has been added")
+                    print("----------------------Password has been added-----------------------------")
                     return True
                 else:
-                    print(f"{second_res.detail}")
+                    print(f"{sec_res["detail"]}")
             else:
                 return False
         else:
-            print(f"{response.detail}")
+            print(f"{res["detail"]}")
             return False
     
     def update_password(self):
@@ -212,35 +219,38 @@ class UserFunctions:
             self.KEK_salt,
             app_password
         )
-        confid_app_data["user_id"] = self.user_id
+        confid_app_data["userid"] = self.user_id
         confid_app_data["application_name"] = application_name
 
-        response = requests.put(f"{URL}/user/passwords",json=confid_app_data.model_dump())
-        response.josn()
+        response = requests.put(
+            f"{URL}/user/passwords",
+            json=confid_app_data
+            )
+        res = response.json()
         if response.status_code == 200:
-            print(f"{response["detail"]}")
+            print(f"{res["detail"]}")
             return True
         else:
-            print(f"{response["detail"]}")
+            print(f"{res["detail"]}")
             return False
     
     def delete_password(self):
         application_name = input("Enter the Application Name to be DELETED : ")
         delete_app_data = {
             "userid" : self.user_id,
-            "application_name" : applciation_name
+            "application_name" : application_name
         }
 
         response = requests.delete(
             f"{URL}/user/passwords",
-            json = delete_app_data.model_dump()
+            json = delete_app_data
         )
-        response.json()
+        res = response.json()
         if response.status_code == 200:
-            print(f"{response["detail"]}")
+            print(f"{res["detail"]}")
             return True
         else:
-            print(f"{response["detail"]}")
+            print(f"{res["detail"]}")
             return False
 
 

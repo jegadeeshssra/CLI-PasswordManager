@@ -3,6 +3,9 @@ from Crypto.Cipher import AES
 import binascii , base64 , scrypt , json
 from pathlib import Path
 
+def find_type(variable: str, value):
+    print(f"{variable} - ",value)
+    print(type(value))
 
 class HashingService:
 
@@ -72,16 +75,13 @@ class KeyService:
             KEK_binary_salt
             )
         # Generating DEK 
-        print("here-1")
         DEK_raw_bytes =  KeyService.generate_data_encrypt_key()
         # Ecrypting DEK with KEK as key
         encrypted_msg = EncryptDecryptService.encrypt_AES_GCM(
             DEK_raw_bytes,
             KEK.encode("utf-8")
         )
-        print("here-2.3     ")
         ( raw_kdf_salt , raw_DEK_ciphertext , raw_nonce , raw_auth_tag ) = encrypted_msg
-        print("here-3")
         app_name = ".secure_app"
         if os.name == 'nt':
             base_dir = Path(os.environ['USERPROFILE'])
@@ -96,9 +96,9 @@ class KeyService:
         config_file = app_dir / "user_config.json"
         #config_file = app_dir / f"user_config_{userid}.json"
 
-        print("OS - ",os.name)
-        print("AppDIR - ",app_dir)
-        print("ConfigFile - ",config_file)
+        # print("OS - ",os.name)
+        # print("AppDIR - ",app_dir)
+        # print("ConfigFile - ",config_file)
 
         # json only accepts string
         key_data = {
@@ -129,15 +129,23 @@ class KeyService:
         config_file = app_dir / "user_config.json"
         #config_file = app_dir / f"user_config_{userid}.json"
 
-        print("OS - ",os.name)
-        print("AppDIR - ",app_dir)
-        print("ConfigFile - ",config_file)
+        # print("OS - ",os.name)
+        # print("AppDIR - ",app_dir)
+        # print("ConfigFile - ",config_file)
 
         if not config_file.exists():
             raise FileNotFoundError("No stored encryption keys found")
 
         with open(config_file, 'r') as f:
             key_data = json.load(f)
+
+        # print(key_data)
+
+        key_data["DEK_ciphertext"] = KeyService.str_to_bytes(key_data["DEK_ciphertext"])
+        kdf = key_data["kdf_parameters"]
+        kdf["kdf_salt"] = KeyService.str_to_bytes(kdf["kdf_salt"])
+        kdf["nonce"] = KeyService.str_to_bytes(kdf["nonce"])
+        kdf["auth_tag"] = KeyService.str_to_bytes(kdf["auth_tag"])
 
         return key_data
 
@@ -150,22 +158,21 @@ class EncryptDecryptService:
         KEK = KeyService.generate_key_encrypt_key(master_password,raw_KEK_salt) # str
         # Retrieve the DEK_ciphertext and OTHER Params for decrypting the ciphertext to get DEK
         user_config = KeyService.retrieve_DEK()
-        DEK = EncryptDecryptService.decrypt_AES_GCM(
+        raw_DEK = EncryptDecryptService.decrypt_AES_GCM(
             KEK.encode("utf-8"),
             user_config["kdf_parameters"]["kdf_salt"],
             user_config["DEK_ciphertext"],
             user_config["kdf_parameters"]["nonce"],
             user_config["kdf_parameters"]["auth_tag"]
         )
-
         encrypted_msg = EncryptDecryptService.encrypt_AES_GCM(
             app_password.encode("utf-8"),
-            KeyService.str_to_bytes(DEK)
+            raw_DEK
             )
         ( kdf_salt , app_pwd_ciphertext , nonce , auth_tag ) = encrypted_msg
         return {
-            "app_password_ciphertext" : KeyService.bytes_to_str(app_pwd_ciphertext),
-            "kdf_salt" : KeyService.bytes_to_str(kdf_salt),
+            "app_password" : KeyService.bytes_to_str(app_pwd_ciphertext),
+            "salt" : KeyService.bytes_to_str(kdf_salt),
             "nonce" : KeyService.bytes_to_str(nonce),
             "auth_tag" : KeyService.bytes_to_str(auth_tag)
         }
@@ -184,30 +191,27 @@ class EncryptDecryptService:
             user_config["kdf_parameters"]["nonce"],
             user_config["kdf_parameters"]["auth_tag"]
         )
-
         decrypted_msg = EncryptDecryptService.decrypt_AES_GCM(
-            KeyService.str_to_bytes(DEK),
+            DEK,
             KeyService.str_to_bytes(kdf_salt),
             KeyService.str_to_bytes(app_password_ciphertext),
             KeyService.str_to_bytes(nonce),
             KeyService.str_to_bytes(auth_tag)
         )
-        return decrypted_msg
+        return decrypted_msg.decode("utf-8")
 
 
     @staticmethod
-    def encrypt_AES_GCM( plaintext: bytes, initial_key: bytes):
+    def encrypt_AES_GCM( plaintext: bytes, initial_key: bytes) -> (bytes,bytes,bytes,bytes):
         kdf_salt = os.urandom(16)
         secret_key = scrypt.hash(initial_key, kdf_salt, N=16384, r=8, p=1, buflen=32)
         aes_cipher = AES.new(secret_key , AES.MODE_GCM)
-        print("here-2")
         ciphertext , auth_tag = aes_cipher.encrypt_and_digest(plaintext)
-        print("here-2.1")
         return ( kdf_salt , ciphertext , aes_cipher.nonce , auth_tag)
     
     @staticmethod
-    def decrypt_AES_GCM( initial_key: bytes, kdf_salt: bytes, ciphertext: bytes, IV: bytes, auth_tag: bytes ):
-        secret_key = scrypt.hash(login_password_hash,kdf_salt,N=16384,r=8,p=1,buflen=32)
+    def decrypt_AES_GCM( initial_key: bytes, kdf_salt: bytes, ciphertext: bytes, IV: bytes, auth_tag: bytes ) -> bytes:
+        secret_key = scrypt.hash(initial_key,kdf_salt,N=16384,r=8,p=1,buflen=32)
         aes_cipher = AES.new(secret_key , AES.MODE_GCM , IV)
         plaintext = aes_cipher.decrypt_and_verify(ciphertext,auth_tag)
         return plaintext 

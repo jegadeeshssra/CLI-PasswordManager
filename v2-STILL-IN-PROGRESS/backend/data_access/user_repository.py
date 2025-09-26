@@ -77,7 +77,7 @@ class UserRepository:
 class CrudRepository:
     def __init__(self):
         self.db = DatabaseConnection()
-        print("CreudRepository Initialized")
+        #print("CrudRepository Initialized")
 
     def get_all_passwords(self, userid: str) -> [[]]:
         try:
@@ -153,7 +153,7 @@ class CrudRepository:
             update_query = f"""
             UPDATE {DATASTORE_TABLE_NAME}
             SET salt = %s , app_password = %s , iv = %s , auth_tag = %s
-            WHERE userid = %S AND application_name = %s;
+            WHERE userid = %s AND application_name = %s;
             """
             self.db.cursor.execute(update_query,(
                 app_data["salt"],
@@ -161,7 +161,7 @@ class CrudRepository:
                 app_data["nonce"], 
                 app_data["auth_tag"],
                 app_data["userid"],
-                app_data["applciation_name"]
+                app_data["application_name"]
             ))
             self.db.connection.commit()
             return True
