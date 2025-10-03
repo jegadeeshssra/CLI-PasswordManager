@@ -46,7 +46,7 @@ class KeyService:
     @staticmethod
     def bytes_to_str(raw_binary: bytes) -> str:
         return (base64.b64encode(raw_binary)).decode("utf-8")
-    
+
     @staticmethod
     def str_to_bytes(text: str) -> bytes:
         return base64.b64decode(text.encode("utf-8"))
@@ -67,15 +67,13 @@ class KeyService:
         return hash
 
     @staticmethod
-    def process_and_store_DEK(email: str, master_password: str, KEK_binary_salt: bytes):
+    def process_and_store_DEK(email: str, master_password: str, KEK_binary_salt: bytes, DEK_raw_bytes: bytes) -> bytes:
         
         # Generating KEK using KDF
         KEK = KeyService.generate_key_encrypt_key(
             master_password, 
             KEK_binary_salt
             )
-        # Generating DEK 
-        DEK_raw_bytes =  KeyService.generate_data_encrypt_key()
         # Ecrypting DEK with KEK as key
         encrypted_msg = EncryptDecryptService.encrypt_AES_GCM(
             DEK_raw_bytes,
@@ -113,7 +111,7 @@ class KeyService:
         }
         with open(config_file,'w') as f:
             json.dump(key_data,f,indent = 2)
-        return True
+        return DEK_raw_bytes
     
     @staticmethod
     def retrieve_DEK() -> dict:
@@ -215,3 +213,83 @@ class EncryptDecryptService:
         aes_cipher = AES.new(secret_key , AES.MODE_GCM , IV)
         plaintext = aes_cipher.decrypt_and_verify(ciphertext,auth_tag)
         return plaintext 
+
+class RecoveryService:
+
+    @staticmethod
+    def generate_recovery_key() -> bytes:
+        return os.urandom(32)
+
+    # why cant this func be in keyService - bcuz RecoveryKey can be stored in local or cloud, so the code can be big enough to be independent.
+    @staticmethod
+    def process_and_store_RK(DEK_raw_bytes : bytes):
+        
+        raw_RK_bytes = RecoveryService.generate_recovery_key()
+        # Ecrypting DEK with KEK as key
+        encrypted_msg = EncryptDecryptService.encrypt_AES_GCM(
+            DEK_raw_bytes,
+            RK_raw_bytes
+        )
+        ( raw_kdf_salt , raw_DEK_ciphertext , raw_nonce , raw_auth_tag ) = encrypted_msg
+        app_name = ".secure_app"
+        if os.name == 'nt':
+            base_dir = Path(os.environ['USERPROFILE'])
+        elif os.name == 'posix':
+            base_dir = Path.home()
+        else:
+            base_dir = Path.cwd()
+
+        app_dir = base_dir / app_name
+        if not Path(app_dir).exists():
+            app_dir.mkdir(parents=True, exist_ok=True)
+        config_file = app_dir / "recovery_config.json"
+        print("Storing the recovery key...")
+        recovery_key_data = {
+            #"user_id": 1,
+            "RK" : keyService.bytes_to_str(raw_RK_bytes),
+            "DEK_ciphertext" : KeyService.bytes_to_str(raw_DEK_ciphertext),
+            "kdf_parameters" : {
+                "kdf_salt" : KeyService.bytes_to_str(raw_kdf_salt),
+                "nonce" : KeyService.bytes_to_str(raw_nonce),
+                "auth_tag" : KeyService.bytes_to_str(raw_auth_tag)
+            }
+        }
+        with open(config_file,'w') as f:
+            json.dump(recovery_key_data,f,indent = 2)
+        print("Recovery Key is stored on the Local System")
+        return True
+    
+    @staticmethod
+    def retrieve_RK() -> dict:
+        print("Retrieving the Recovery Key...")
+        app_name = ".secure_app"
+        if os.name == 'nt':
+            base_dir = Path(os.environ['USERPROFILE'])
+        elif os.name == 'posix':
+            base_dir = Path.home()
+        else:
+            base_dir = Path.cwd()
+
+        app_dir = base_dir / app_name
+        config_file = app_dir / "recovery_config.json"
+        #config_file = app_dir / f"user_config_{userid}.json"
+
+        # print("OS - ",os.name)
+        # print("AppDIR - ",app_dir)
+        # print("ConfigFile - ",config_file)
+
+        if not config_file.exists():
+            raise FileNotFoundError("No stored encryption keys found")
+
+        with open(config_file, 'r') as f:
+            key_data = json.load(f)
+
+        # print(key_data)
+        key_data["RK"] = keyService.str_to_bytes(key_data["RK"])
+        key_data["DEK_ciphertext"] = KeyService.str_to_bytes(key_data["DEK_ciphertext"])
+        kdf = key_data["kdf_parameters"]
+        kdf["kdf_salt"] = KeyService.str_to_bytes(kdf["kdf_salt"])
+        kdf["nonce"] = KeyService.str_to_bytes(kdf["nonce"])
+        kdf["auth_tag"] = KeyService.str_to_bytes(kdf["auth_tag"])
+
+        return key_data

@@ -32,6 +32,7 @@ def register() -> bool:
         email    = input("Enter the email : ") 
         master_password = input("Enter the Master Password : ")
         hashed_master_password = HashingService.generate_auth_hash(master_password)
+        # generating random salt for generating KEK
         KEK_binary_salt = KeyService.generate_data_encrypt_key()
         user_data = UserData( email = email, hashed_master_password = hashed_master_password, KEK_salt = (base64.b64encode(KEK_binary_salt)).decode("utf-8"))
 
@@ -39,8 +40,11 @@ def register() -> bool:
 
         res_body = response.json() # json to dict
         if response.status_code == 200:
-            if KeyService.process_and_store_DEK(email, master_password, KEK_binary_salt):
+            DEK_raw_bytes = KeyService.generate_data_encrypt_key()
+            if KeyService.process_and_store_DEK(email, master_password, KEK_binary_salt, DEK_raw_bytes):
                 print("------You are REGISTERED------")
+                if RecoveryService.process_and_store_RK( DEK_raw_bytes):
+                    print("-------Recovery Key has been stored on the LOCAL SYSTEM-------------")
             else:
                 raise "Error in processing DEK"
         else:
@@ -52,6 +56,10 @@ def register() -> bool:
     except Exception as e:
         print(f"❌ Error: {e}")
     return 1
+
+def forgot_password(email : str):
+    
+
 
 def login() -> Optional[str]:
     try:
