@@ -21,6 +21,22 @@ class UserCreateInStorage(BaseModel):
     password_hash: str
     salt: str
 
+class UserModify(BaseModel):
+    userid: str
+    email: str
+    new_hashed_master_password: str
+    new_KEK_salt : str
+
+    @field_validator("email")
+    def email_to_lower(cls, value: str) -> str:
+        return value.lower()
+
+class UserModifyInStorage(BaseModel):
+    userid: str
+    email: str
+    password_hash: str
+    salt: str
+
 class UserLogin(BaseModel):
     email: str
 

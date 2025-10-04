@@ -38,8 +38,10 @@ Re-encryption of App Password with New Password
 
 
 Forgot password
-- Use the uploaded recovery key to decrypt the DEK
+- Use the uploaded recovery key 
+- decrypt the DEK
 - Get the new password
+- generate a new salt KEK
 - DELETE the old Login record from the DB(includes hash,KEK_salt,kdf_params)
 - Using the new master_password, generate KEK and encrypt the DEK and store it.
 

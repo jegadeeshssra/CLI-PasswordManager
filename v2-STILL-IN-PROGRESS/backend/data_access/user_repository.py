@@ -29,6 +29,22 @@ class UserRepository:
             print(f"Database error: {e}")
             return False
 
+    def modify_user(self, modified_user_data: UserModifyInStorage) -> bool:
+        try:
+            modify_user_query = f"""
+            UPDATE{CREDS_TABLE_NAME}
+            SET master_password = %s , salt = %s
+            WHERE userid = %s;
+            """
+            self.db.cursor.execute(modify_user_query,(modified_user_data["hashed_password"], modified_user_data["salt"], modified_user_data["userid"]))
+            self.db.connection.commit()
+            return True
+
+        except psycopg2.Error as e:
+            self.db.connection.rollback()
+            print(f"Database error: {e}")
+            return False
+
     def get_user_by_email(self, email: str) -> dict:
         try:
             retrival_query = f"""

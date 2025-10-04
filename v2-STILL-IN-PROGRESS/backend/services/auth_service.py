@@ -1,4 +1,4 @@
-from models.user import UserCreate , UserLogin
+from models.user import UserCreate , UserLogin , UserModifyInStorage
 from data_access.user_repository import UserRepository
 from data_access.exceptions import DatabaseOperationError, DatabaseIntegrityError
 from fastapi import HTTPException
@@ -56,6 +56,37 @@ class AuthService:
                 detail = "Service temporarily unavailable"
             )
         except DatabaseIntegrityError as e:
+            # This is a serious issue that needs attention
+            raise HTTPException(
+                status_code = 500,
+                detail = "Internal server error"
+            )
+    
+    def modify_user(self, modified_user_data: dict):
+        try:
+            # Retrieve the user details if the user's email exists
+            user = self.user_repo.get_user_by_email(login_data.email)
+            if user == None:
+                raise HTTPException(
+                    status_code = 401, 
+                    detail = "Register First"
+                ) 
+            data_for_storage = {
+                "userid" : modified_user_data["userid"],
+                "email" : modified_user_data["email"],
+                "password_hash" : modified_user_data["new_hashed_master_password"],
+                "salt" : modified_user_data["new_KEK_salt"]
+            }
+            if self.user_repo.modify_user(data_for_storage)
+                return {
+                    "detail" : "Modified the auth record with new password and new salt"
+                }
+            else:
+                raise HTTPException(
+                    status_code = 500,
+                    detail = "Internal server error"
+                )
+        except Exception as e:
             # This is a serious issue that needs attention
             raise HTTPException(
                 status_code = 500,

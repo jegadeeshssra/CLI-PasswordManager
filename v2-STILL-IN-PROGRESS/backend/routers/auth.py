@@ -1,4 +1,4 @@
-from models.user import UserCreate , UserLogin
+from models.user import UserCreate , UserLogin , UserModify
 from services.auth_service import AuthService
 from fastapi import APIRouter
 
@@ -16,3 +16,9 @@ def register(user_data: UserCreate):
 def login(login_data: UserLogin):
     auth_service = AuthService()
     return auth_service.authenticate_user(login_data)
+
+# actual_path - /auth/forgotPassword
+@router.post("/forgotPassword")
+def forgot_password(modified_user_data: UserModify):
+    auth_service = AuthService()
+    return auth_service.modify_user(modified_user_data)

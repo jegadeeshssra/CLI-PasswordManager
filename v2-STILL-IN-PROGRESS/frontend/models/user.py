@@ -5,6 +5,13 @@ class UserData(BaseModel):
     hashed_master_password: str
     KEK_salt : str
 
+class ModifiedUserData(BaseModel):
+    userid: str
+    email: EmailStr
+    new_hashed_master_password: str
+    new_KEK_salt : str
+
+
 class UserLoginData(BaseModel):
     email: EmailStr
 

@@ -4,6 +4,8 @@ from Crypto.Cipher import AES
 import scrypt, os, binascii, argon2 , base64
 from pydantic import ValidationError
 from typing import Optional
+import tkinter as tk
+from tkinter import filedialog
 
 # from other programs
 from models.user import UserData , UserPasswordData , UserLoginData
@@ -57,9 +59,59 @@ def register() -> bool:
         print(f"❌ Error: {e}")
     return 1
 
+# Still have to call this function
 def forgot_password(email : str):
-    
+    # Get the userid
+    login_data = UserLoginData(email = email)
+    response = requests.post(f"{URL}/auth/login",json=login_data.model_dump())
+    res_body = response.json()
+    if response.status_code != 200:
+        print("------------------------------")
+        print(res_body["detail"])
+        print("------------------------------")
+        return False
+    userid = res_body["userid"]
+    # Retrieve the Raw DEK
+    recovery_config = RecoveryService.retrieve_RK():
+    if recovery_config == 0:
+        return False
+    raw_DEK = EncryptDecryptService.decrypt_AES_GCM(
+        recovery_config["RK"],
+        recovery_config["kdf_parameters"]["kdf_salt"],
+        recovery_config["DEK_ciphertext"],
+        recovery_config["kdf_parameters"]["nonce"],
+        recovery_config["kdf_parameters"]["auth_tag"]
+    )
+    # Get the NEW Master Password
+    while True:
+        new_master_password = input("Enter the NEW Master Password : ")
+        retype_pwd = input("Enter the NEW Master Password again : ")
+        if new_master_password != retype_pwd:
+            print("New Password doesnt match")
+            continue
+        else:
+            break
+    # Generate new auth hash with new master password
+    new_hashed_master_password = HashingService.generate_auth_hash(new_master_password)
+    # generating new random salt for generating KEK
+    new_KEK_binary_salt = KeyService.generate_data_encrypt_key()
+    # generate new user_config
+    if not KeyService.process_and_store_DEK(email, new_master_password, new_KEK_binary_salt, raw_DEK):
+        print("Error in generating new user_config.json")
+        return False
 
+    modified_user_data = ModifiedUserData( userid = userid , email = email, new_hashed_master_password = hashed_master_password, new_KEK_salt = (base64.b64encode(new_KEK_binary_salt)).decode("utf-8"))
+    response = requests.post(f'{URL}/auth/forgotPassword', json=modified_user_data.model_dump())
+    res_body = response.json()
+    if response.status_code != 200:
+        print("------------------------------")
+        print(res_body["detail"])
+        print("------------------------------")
+        return False
+    print("--------------------------------------")
+    print("The NEW Master Password has been RESET")
+    print("--------------------------------------")
+    return True
 
 def login() -> Optional[str]:
     try:

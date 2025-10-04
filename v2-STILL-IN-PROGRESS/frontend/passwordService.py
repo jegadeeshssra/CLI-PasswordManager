@@ -279,7 +279,8 @@ class RecoveryService:
         # print("ConfigFile - ",config_file)
 
         if not config_file.exists():
-            raise FileNotFoundError("No stored encryption keys found")
+            print("No stored encryption keys found")
+            return False
 
         with open(config_file, 'r') as f:
             key_data = json.load(f)
@@ -293,3 +294,37 @@ class RecoveryService:
         kdf["auth_tag"] = KeyService.str_to_bytes(kdf["auth_tag"])
 
         return key_data
+    
+    # Not used for now
+    def get_recovery_key() -> dict:
+        while:
+            choice = input("Ready to Upload the Recovery Key Y/N : ")
+            if choice.lower() not in ("y","n","yes","no"):
+                print("Enter a Valid Choice")
+                continue
+            elif choice.lower() in ("n","no"):
+                print("Need to upload the Recovery key to prevent your data loss")
+                return False
+            else:
+                # User selects the file to get the FilePath
+                root = tk.Tk()
+                root.withdraw()  # Hide the main window
+                recovery_config = filedialog.askopenfilename(
+                    title="Select JSON file",
+                    filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+                )
+                root.destroy()
+                # check if the file exists
+                if not recovery_config.exists():
+                    raise FileNotFoundError("No stored encryption keys found")
+                # Read the file's contents and convert to a Dict
+                with open(recovery_config, 'r') as f:
+                    key_data = json.load(f)
+                # print(key_data)
+                key_data["RK"] = keyService.str_to_bytes(key_data["RK"])
+                key_data["DEK_ciphertext"] = KeyService.str_to_bytes(key_data["DEK_ciphertext"])
+                kdf = key_data["kdf_parameters"]
+                kdf["kdf_salt"] = KeyService.str_to_bytes(kdf["kdf_salt"])
+                kdf["nonce"] = KeyService.str_to_bytes(kdf["nonce"])
+                kdf["auth_tag"] = KeyService.str_to_bytes(kdf["auth_tag"])
+                return key_data
