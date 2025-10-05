@@ -19,6 +19,7 @@ def login(login_data: UserLogin):
 
 # actual_path - /auth/forgotPassword
 @router.post("/forgotPassword")
-def forgot_password(modified_user_data: UserModify):
+def forgotPassword(modified_user_data: UserModify):
     auth_service = AuthService()
+    print("H-0")
     return auth_service.modify_user(modified_user_data)

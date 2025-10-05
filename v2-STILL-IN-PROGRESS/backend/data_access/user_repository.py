@@ -1,6 +1,6 @@
 # Code to access data
 import psycopg2 , os
-from models.user import UserCreateInStorage , ConfidAppData
+from models.user import UserCreateInStorage , ConfidAppData , UserModifyInStorage
 from db_ops.db_connection import DatabaseConnection
 from .exceptions import DatabaseOperationError, DatabaseIntegrityError
 
@@ -32,12 +32,13 @@ class UserRepository:
     def modify_user(self, modified_user_data: UserModifyInStorage) -> bool:
         try:
             modify_user_query = f"""
-            UPDATE{CREDS_TABLE_NAME}
+            UPDATE {CREDS_TABLE_NAME}
             SET master_password = %s , salt = %s
             WHERE userid = %s;
             """
             self.db.cursor.execute(modify_user_query,(modified_user_data["hashed_password"], modified_user_data["salt"], modified_user_data["userid"]))
             self.db.connection.commit()
+            print("H-3")
             return True
 
         except psycopg2.Error as e:

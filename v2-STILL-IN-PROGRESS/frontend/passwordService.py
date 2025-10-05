@@ -34,8 +34,14 @@ class HashingService:
             hash_len=32, 
             salt_len=32
             )
-        verifyValid = argon2Hasher.verify(auth_hash, master_password)
-        return verifyValid
+        try:
+            argon2Hasher.verify(auth_hash, master_password)
+            return True  # Only if no exception
+        except argon2.exceptions.VerifyMismatchError:
+            return False  # Password mismatch
+        except argon2.exceptions.VerificationError:
+            return False  # Other verification errors
+
 
 class KeyService:
 
@@ -228,7 +234,7 @@ class RecoveryService:
         # Ecrypting DEK with KEK as key
         encrypted_msg = EncryptDecryptService.encrypt_AES_GCM(
             DEK_raw_bytes,
-            RK_raw_bytes
+            raw_RK_bytes
         )
         ( raw_kdf_salt , raw_DEK_ciphertext , raw_nonce , raw_auth_tag ) = encrypted_msg
         app_name = ".secure_app"
@@ -246,13 +252,13 @@ class RecoveryService:
         print("Storing the recovery key...")
         recovery_key_data = {
             #"user_id": 1,
-            "RK" : keyService.bytes_to_str(raw_RK_bytes),
+            "RK" : KeyService.bytes_to_str(raw_RK_bytes),
             "DEK_ciphertext" : KeyService.bytes_to_str(raw_DEK_ciphertext),
             "kdf_parameters" : {
                 "kdf_salt" : KeyService.bytes_to_str(raw_kdf_salt),
                 "nonce" : KeyService.bytes_to_str(raw_nonce),
                 "auth_tag" : KeyService.bytes_to_str(raw_auth_tag)
-            }
+            }   
         }
         with open(config_file,'w') as f:
             json.dump(recovery_key_data,f,indent = 2)
@@ -286,7 +292,7 @@ class RecoveryService:
             key_data = json.load(f)
 
         # print(key_data)
-        key_data["RK"] = keyService.str_to_bytes(key_data["RK"])
+        key_data["RK"] = KeyService.str_to_bytes(key_data["RK"])
         key_data["DEK_ciphertext"] = KeyService.str_to_bytes(key_data["DEK_ciphertext"])
         kdf = key_data["kdf_parameters"]
         kdf["kdf_salt"] = KeyService.str_to_bytes(kdf["kdf_salt"])
@@ -297,7 +303,7 @@ class RecoveryService:
     
     # Not used for now
     def get_recovery_key() -> dict:
-        while:
+        while True:
             choice = input("Ready to Upload the Recovery Key Y/N : ")
             if choice.lower() not in ("y","n","yes","no"):
                 print("Enter a Valid Choice")
@@ -321,7 +327,7 @@ class RecoveryService:
                 with open(recovery_config, 'r') as f:
                     key_data = json.load(f)
                 # print(key_data)
-                key_data["RK"] = keyService.str_to_bytes(key_data["RK"])
+                key_data["RK"] = KeyService.str_to_bytes(key_data["RK"])
                 key_data["DEK_ciphertext"] = KeyService.str_to_bytes(key_data["DEK_ciphertext"])
                 kdf = key_data["kdf_parameters"]
                 kdf["kdf_salt"] = KeyService.str_to_bytes(kdf["kdf_salt"])

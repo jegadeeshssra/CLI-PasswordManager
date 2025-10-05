@@ -65,19 +65,19 @@ class AuthService:
     def modify_user(self, modified_user_data: dict):
         try:
             # Retrieve the user details if the user's email exists
-            user = self.user_repo.get_user_by_email(login_data.email)
+            user = self.user_repo.get_user_by_email(modified_user_data.email)
             if user == None:
                 raise HTTPException(
                     status_code = 401, 
                     detail = "Register First"
                 ) 
             data_for_storage = {
-                "userid" : modified_user_data["userid"],
-                "email" : modified_user_data["email"],
-                "password_hash" : modified_user_data["new_hashed_master_password"],
-                "salt" : modified_user_data["new_KEK_salt"]
+                "userid" : modified_user_data.userid,
+                "email" : modified_user_data.email,
+                "hashed _password" : modified_user_data.new_hashed_master_password,
+                "salt" : modified_user_data.new_KEK_salt
             }
-            if self.user_repo.modify_user(data_for_storage)
+            if self.user_repo.modify_user(data_for_storage):
                 return {
                     "detail" : "Modified the auth record with new password and new salt"
                 }
@@ -86,11 +86,17 @@ class AuthService:
                     status_code = 500,
                     detail = "Internal server error"
                 )
-        except Exception as e:
+        except DatabaseOperationError as e:
+            raise HTTPException(
+                status_code = 503,
+                detail = "Service temporarily unavailable"
+            )
+        except DatabaseIntegrityError as e:
             # This is a serious issue that needs attention
             raise HTTPException(
                 status_code = 500,
                 detail = "Internal server error"
             )
+    
 
 
